@@ -1,0 +1,13 @@
+name = "leadgress-landing"
+compatibility_date = "2024-11-21"
+
+# Cloudflare Pages Functions
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+# Update database_id after running: wrangler d1 create leads-db
+binding = "LEADS_DB"
+database_name = "leads-db"
+database_id = "REPLACE_WITH_D1_ID"
+
+

@@ -68,34 +68,33 @@ function Logo({ className = "", alt = "LEADGRESS logo" }) {
   );
 }
 
-function RiyalIcon({ className = "inline-block h-[1em] w-auto align-[-0.1em]", title = "ريال سعودي" }) {
-  const [src, setSrc] = useState(ENV_RIYAL_ICON || FALLBACK_RIYAL_ICON);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    setSrc(ENV_RIYAL_ICON || FALLBACK_RIYAL_ICON);
-    setFailed(false);
-  }, []);
-  if (failed) {
-    return <span aria-label={title} title={title} className="inline-block align-[-0.1em] font-extrabold">﷼</span>;
-  }
+function RiyalIcon({ className = "inline-block h-[1em] w-[1.2em] align-[-0.1em]" }) {
   return (
-    <img
-      src={src}
-      alt={title}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
       className={className}
-      onError={() => setFailed(true)}
-      loading="lazy"
-      decoding="async"
-    />
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <linearGradient id="sar-g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#22d3ee" />
+          <stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+      </defs>
+      <path d="M6 6h4c3 0 5 1.6 5 4.2 0 2.7-2 4.3-5 4.3H8" stroke="url(#sar-g)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <path d="M16 6h2M16 11h2M16 15h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+    </svg>
   );
 }
 
 function SAR({ amount, period }) {
+  const formatted = typeof amount === 'number' ? amount.toLocaleString('ar-SA') : amount;
   return (
-    <span className="inline-flex items-center gap-2">
-      <RiyalIcon />
-      {typeof amount === 'number' ? amount.toLocaleString('ar-SA') : amount}
-      {period && <span className="text-base text-slate-300">/{period}</span>}
+    <span className="inline-flex items-baseline gap-2">
+      <span className="tabular-nums">{formatted}</span>
+      <span className="text-base text-slate-300">ريال سعودي{period ? `/${period}` : ''}</span>
     </span>
   );
 }
@@ -292,7 +291,7 @@ function HeroInspired() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
           <motion.div style={{ y: y1 }} className="text-center md:text-right">
             <h1 className="text-4xl font-black leading-tight md:text-5xl">
-              <WordReveal text="لا تُضِع وقتك في الإدارة —" />
+              <WordReveal text="لا تُضِع وقتك في الإدارة" />
               <span className="bg-gradient-to-r from-cyan-300 to-indigo-400 bg-clip-text text-transparent">
                 <WordReveal text="درّب فقط" delay={0.3} />
               </span>
@@ -325,9 +324,9 @@ function HeroInspired() {
               className="rounded-2xl border border-white/10 bg-white/5 p-5"
             >
               <div className="text-xs text-slate-400">الرصيد</div>
-              <div className="text-2xl font-black inline-flex items-center gap-2">
-                <RiyalIcon className="h-6 w-auto" />
-                92,250
+              <div className="text-2xl font-black inline-flex items-baseline gap-2">
+                <span className="tabular-nums">92,250</span>
+                <span className="text-base text-slate-300">ريال سعودي</span>
               </div>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full border border-white/10 bg-slate-800">
                 <motion.div
@@ -434,7 +433,7 @@ function VoiceDemoMockup() {
                     />
                   ))}
                 </div>
-                <div className="mt-2 text-xs text-slate-400">تحويل الصوت إلى نص — مباشر</div>
+                <div className="mt-2 text-xs text-slate-400">تحويل الصوت إلى نص مباشرة</div>
               </div>
 
               {/* Transcript typing */}
@@ -462,7 +461,7 @@ function VoiceDemoMockup() {
             className="self-center text-center md:text-right"
           >
             <h3 className="text-2xl font-extrabold">
-              <WordReveal text="اعرض ميزتك بصريًا — بدون كلام كثير" />
+              <WordReveal text="اعرض ميزتك بصريًا بدون كلام كثير" />
             </h3>
             <p className="mt-2 text-slate-300">
               <WordReveal text="موك أب بسيط يوضّح التحويل من صوت إلى نص، مع حركة مستمرة وتفاعل صغير." delay={0.2} />
@@ -590,7 +589,7 @@ function SocialProof() {
 /* ---------------------------------- FAQ ---------------------------------- */
 function FAQAccordion() {
   const items = [
-    { q: "هل فيه نسخة للعميل؟", a: "نعم ضمن خارطة الطريق—تطبيق عميل مع تتبع تقدّم وإشعارات." },
+    { q: "هل فيه نسخة للعميل؟", a: "نعم ضمن خارطة الطريق، تطبيق عميل مع تتبع تقدّم وإشعارات." },
     { q: "هل تدعمون الضرائب والفواتير؟", a: "نصدر فواتير مع ضريبة 15% ورمز QR وسجل مدفوعات." },
     { q: "طرق الدفع؟", a: "Moyasar: مدى و Apple Pay مع تشفير كامل." },
   ];
@@ -867,19 +866,23 @@ function PriceCard({ title, price, list, subtle }) {
 /* -------------------------------- Lead form ------------------------------ */
 function LeadForm() {
   const [ok, setOk] = useState(false);
-  function onSubmit(e) {
+  async function onSubmit(e) {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.currentTarget).entries());
-    const valid =
-      data.name &&
-      typeof data.email === "string" &&
-      data.email.includes("@") &&
-      data.email.includes(".") &&
-      data.email.length > 5;
-    if (!valid) return alert("فضلاً أدخل اسمًا وبريدًا صحيحين");
-    const leads = JSON.parse(localStorage.getItem("ftm_leads") || "[]");
-    leads.push({ ...data, createdAt: new Date().toISOString(), view: "waitlist", product: "FitnessTrainerMVP" });
-    localStorage.setItem("ftm_leads", JSON.stringify(leads));
+    if (!data.name) return alert("فضلاً أدخل الاسم");
+    const payload = { ...data, view: "waitlist", product: "LEADGRESS" };
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("bad status");
+    } catch (err) {
+      const leads = JSON.parse(localStorage.getItem("ftm_leads") || "[]");
+      leads.push({ ...payload, createdAt: new Date().toISOString(), fallback: true });
+      localStorage.setItem("ftm_leads", JSON.stringify(leads));
+    }
     setOk(true);
     e.currentTarget.reset();
   }
@@ -901,7 +904,7 @@ function LeadForm() {
               exit={{ opacity: 0, y: -8 }}
               className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-cyan-200"
             >
-              تم الاستلام — بنوافيك بالتجربة 🎉
+              تم الاستلام، بنوافيك بالتجربة 🎉
             </motion.div>
           )}
         </AnimatePresence>
@@ -925,7 +928,7 @@ function FooterMinimal() {
     <footer className="border-t border-white/10 bg-white/5 py-8">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 text-center md:flex-row md:justify-between md:text-right">
         <div>
-          <div className="font-extrabold">FitnessTrainerMVP</div>
+          <div className="font-extrabold">LEADGRESS</div>
           <div className="text-xs text-slate-400">© {new Date().getFullYear()} جميع الحقوق محفوظة.</div>
         </div>
         <div className="text-sm text-slate-300">مستوحى بصريًا من بساطة الصفحات ذات التركيز العالي على القيمة والـCTA.</div>
