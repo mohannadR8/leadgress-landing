@@ -1,6 +1,9 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
   try {
+    if (!env.LEADS_DB) {
+      return new Response(JSON.stringify({ ok: false, error: 'LEADS_DB binding missing' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
     // CORS: allow same-origin and preconfigured frontend
     const origin = request.headers.get('Origin') || '';
     const allowed = [origin];
@@ -23,6 +26,25 @@ export async function onRequestPost(context) {
     const ip_last4 = ip.split('.').slice(-1)[0] || '';
     const ua = request.headers.get('User-Agent') || '';
     const ua_hash = await sha256Hex(ua);
+
+    // Ensure table exists in case migrations were not applied
+    const schema = `CREATE TABLE IF NOT EXISTS leads (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      product TEXT,
+      view TEXT,
+      created_at TEXT NOT NULL,
+      ip_last4 TEXT,
+      ua_hash TEXT,
+      utm_source TEXT,
+      utm_campaign TEXT,
+      notes TEXT
+    );`;
+    await env.LEADS_DB.exec?.(schema).catch(async () => {
+      try { await env.LEADS_DB.prepare(schema).run(); } catch (_) {}
+    });
 
     const stmt = `INSERT INTO leads (id, name, email, phone, product, view, created_at, ip_last4, ua_hash, utm_source, utm_campaign, notes)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -48,7 +70,7 @@ export async function onRequestPost(context) {
       status: 201,
     });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: e.message }), {
+    return new Response(JSON.stringify({ ok: false, error: e.message, stack: e.stack }), {
       headers: { 'Content-Type': 'application/json' },
       status: 500,
     });
@@ -65,8 +87,12 @@ async function sha256Hex(input) {
 export async function onRequestGet(context) {
   const { request, env } = context;
   try {
+    if (!env.LEADS_DB) {
+      return new Response(JSON.stringify({ ok: false, error: 'LEADS_DB binding missing' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
     const url = new URL(request.url);
     const limitParam = Math.max(1, Math.min(200, Number(url.searchParams.get('limit')) || 50));
+    const debug = url.searchParams.get('debug') === '1';
 
     const origin = request.headers.get('Origin') || '';
     const corsHeaders = {
@@ -78,6 +104,23 @@ export async function onRequestGet(context) {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // Ensure table exists to avoid first-run errors on fresh envs
+    const schema = `CREATE TABLE IF NOT EXISTS leads (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      product TEXT,
+      view TEXT,
+      created_at TEXT NOT NULL,
+      ip_last4 TEXT,
+      ua_hash TEXT,
+      utm_source TEXT,
+      utm_campaign TEXT,
+      notes TEXT
+    );`;
+    try { await env.LEADS_DB.prepare(schema).run(); } catch (_) {}
+
     const res = await env.LEADS_DB.prepare(
       `SELECT id, name, email, phone, product, view, created_at
        FROM leads
@@ -85,12 +128,25 @@ export async function onRequestGet(context) {
        LIMIT ?`
     ).bind(limitParam).all();
 
-    return new Response(JSON.stringify({ ok: true, items: res.results }), {
+    const payload = { ok: true, items: res.results };
+    if (debug) {
+      const countRes = await env.LEADS_DB.prepare('SELECT COUNT(*) as c FROM leads').all();
+      payload.total = countRes.results?.[0]?.c ?? 0;
+    }
+
+    return new Response(JSON.stringify(payload), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
       status: 200,
     });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: e.message }), {
+    const msg = String(e?.message || e);
+    if (msg.includes('no such table: leads')) {
+      return new Response(JSON.stringify({ ok: true, items: [], total: 0 }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    }
+    return new Response(JSON.stringify({ ok: false, error: msg, stack: e.stack }), {
       headers: { 'Content-Type': 'application/json' },
       status: 500,
     });

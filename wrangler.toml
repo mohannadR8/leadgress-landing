@@ -8,6 +8,6 @@ pages_build_output_dir = "dist"
 # Update database_id after running: wrangler d1 create leads-db
 binding = "LEADS_DB"
 database_name = "leads-db"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "7289ddb3-5c5e-421c-9859-34cd57857925"
 
 
