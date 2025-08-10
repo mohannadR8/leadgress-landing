@@ -101,6 +101,7 @@ export async function onRequestGet(context) {
     const url = new URL(request.url);
     const limitParam = Math.max(1, Math.min(200, Number(url.searchParams.get('limit')) || 50));
     const debug = url.searchParams.get('debug') === '1';
+    const token = url.searchParams.get('token') || '';
 
     const origin = request.headers.get('Origin') || '';
     const corsHeaders = {
@@ -110,6 +111,12 @@ export async function onRequestGet(context) {
     };
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
+    }
+
+    // Access control: allow only if explicitly enabled or token matches
+    const allowed = env.ALLOW_LEADS_GET === 'true' || (env.ADMIN_READ_TOKEN && token === env.ADMIN_READ_TOKEN);
+    if (!allowed) {
+      return new Response('Not found', { status: 404 });
     }
 
     // Ensure table exists to avoid first-run errors on fresh envs

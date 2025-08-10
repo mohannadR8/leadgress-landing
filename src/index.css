@@ -6,4 +6,13 @@ html, body, #root { height: 100%; }
   body {
     @apply bg-gray-100 text-gray-900;
   }
+  /* تحسين المسافات للنص العربي على كل الصفحة */
+  [dir="rtl"] body {
+    word-spacing: 0.10em; /* زيادة بسيطة بين الكلمات بدون تغيير حجم الحروف */
+    letter-spacing: 0;
+  }
+  /* فئة صريحة لتوسيع المسافة بين الكلمات داخل حاوية معينة */
+  .rtl-ws {
+    word-spacing: 0.12em;
+  }
 }
