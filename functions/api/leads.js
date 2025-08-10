@@ -46,23 +46,31 @@ export async function onRequestPost(context) {
       try { await env.LEADS_DB.prepare(schema).run(); } catch (_) {}
     });
 
-    const stmt = `INSERT INTO leads (id, name, email, phone, product, view, created_at, ip_last4, ua_hash, utm_source, utm_campaign, notes)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const values = [
+    // Build INSERT dynamically من أعمدة موجودة بالفعل لتجنّب أخطاء "no column named ..."
+    const allCols = ['id','name','email','phone','product','view','created_at','ip_last4','ua_hash','utm_source','utm_campaign','notes'];
+    const existing = await env.LEADS_DB.prepare("PRAGMA table_info('leads')").all();
+    const existingCols = new Set((existing.results || []).map(r => r.name));
+    const cols = allCols.filter(c => existingCols.has(c));
+    if (!existingCols.has('id')) cols.unshift('id');
+    if (!existingCols.has('created_at')) cols.push('created_at');
+
+    const valuesMap = {
       id,
-      data.name || '',
-      data.email || null,
-      data.phone || null,
-      data.product || 'LEADGRESS',
-      data.view || 'waitlist',
-      now,
+      name: data.name || '',
+      email: data.email || null,
+      phone: data.phone || null,
+      product: data.product || 'LEADGRESS',
+      view: data.view || 'waitlist',
+      created_at: now,
       ip_last4,
       ua_hash,
-      data.utm_source || null,
-      data.utm_campaign || null,
-      data.notes || null,
-    ];
-
+      utm_source: data.utm_source || null,
+      utm_campaign: data.utm_campaign || null,
+      notes: data.notes || null,
+    };
+    const placeholders = cols.map(() => '?').join(', ');
+    const stmt = `INSERT INTO leads (${cols.join(', ')}) VALUES (${placeholders})`;
+    const values = cols.map(c => valuesMap[c]);
     await env.LEADS_DB.prepare(stmt).bind(...values).run();
 
     return new Response(JSON.stringify({ ok: true, id }), {
