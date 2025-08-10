@@ -22,21 +22,81 @@ import {
   Globe,
 } from "lucide-react";
 
-// ====== Brand / Logo config ======
-// ضع رابط Cloudflare Images في متغير البيئة VITE_LOGO_URL
-// مثال: https://imagedelivery.net/ACCOUNT_HASH/IMAGE_ID/public
-const LOGO_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_LOGO_URL)
-  ? import.meta.env.VITE_LOGO_URL
-  : "https://imagedelivery.net/ACCOUNT_HASH/IMAGE_ID/public";
+// Feature flags
+const SHOW_PRICING = false;
 
-function Logo({ className = "" }) {
+// ====== Brand / Logo config ======
+// أولوية التحميل: متغير بيئة (Cloudflare Images) ثم ملف public/logo.png
+const ENV_LOGO = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_LOGO_URL)
+  ? import.meta.env.VITE_LOGO_URL
+  : null;
+const FALLBACK_LOGO = "/logo.png"; // تأكد من وجود الملف داخل مجلد public
+// أيقونة الريال السعودي الجديدة: تُحمَّل من متغير بيئة أو من public/riyal.svg، وإلا فـ fallback نصي
+const ENV_RIYAL_ICON = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_RIYAL_ICON_URL)
+  ? import.meta.env.VITE_RIYAL_ICON_URL
+  : null;
+const FALLBACK_RIYAL_ICON = "/riyal.svg";
+
+function Logo({ className = "", alt = "LEADGRESS logo" }) {
+  const [src, setSrc] = useState(ENV_LOGO || FALLBACK_LOGO);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    console.info("[Logo] using", ENV_LOGO ? "VITE_LOGO_URL (Cloudflare Images)" : "public/logo.png");
+  }, []);
+  if (failed) {
+    return (
+      <span className={`h-10 inline-flex items-center font-extrabold tracking-wide bg-gradient-to-r from-cyan-300 to-indigo-400 bg-clip-text text-transparent ${className}`}>
+        LEADGRESS
+      </span>
+    );
+  }
   return (
     <img
-      src={LOGO_URL}
-      alt="LEADGRESS logo"
-      className={`h-8 w-auto ${className}`}
+      src={src}
+      alt={alt}
+      className={`h-10 w-auto ${className}`}
       loading="eager"
+      fetchPriority="high"
+      onError={() => {
+        if (src !== FALLBACK_LOGO) {
+          setSrc(FALLBACK_LOGO);
+        } else {
+          setFailed(true);
+        }
+      }}
     />
+  );
+}
+
+function RiyalIcon({ className = "inline-block h-[1em] w-auto align-[-0.1em]", title = "ريال سعودي" }) {
+  const [src, setSrc] = useState(ENV_RIYAL_ICON || FALLBACK_RIYAL_ICON);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setSrc(ENV_RIYAL_ICON || FALLBACK_RIYAL_ICON);
+    setFailed(false);
+  }, []);
+  if (failed) {
+    return <span aria-label={title} title={title} className="inline-block align-[-0.1em] font-extrabold">﷼</span>;
+  }
+  return (
+    <img
+      src={src}
+      alt={title}
+      className={className}
+      onError={() => setFailed(true)}
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+function SAR({ amount, period }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <RiyalIcon />
+      {typeof amount === 'number' ? amount.toLocaleString('ar-SA') : amount}
+      {period && <span className="text-base text-slate-300">/{period}</span>}
+    </span>
   );
 }
 
@@ -66,7 +126,7 @@ export default function FitnessTrainerFramerLanding() {
           <SocialProof />
           <CTARepeat />
           <MinimalFeatures />
-          <PricingInspired />
+          {SHOW_PRICING && <PricingInspired />}
           <FAQAccordion />
           <LeadForm />
           <StickyCTA />
@@ -183,7 +243,9 @@ function HeaderMinimal() {
         <nav className="hidden items-center gap-5 text-sm text-slate-300 md:flex">
           <a href="#how" className="hover:text-white">كيف يعمل؟</a>
           <a href="#features" className="hover:text-white">المميزات</a>
-          <a href="#pricing" className="hover:text-white">الأسعار</a>
+          {SHOW_PRICING && (
+            <a href="#pricing" className="hover:text-white">الأسعار</a>
+          )}
         </nav>
         <MagneticButton
           as="a"
@@ -235,9 +297,9 @@ function HeroInspired() {
                 <WordReveal text="درّب فقط" delay={0.3} />
               </span>
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">
-              <WordReveal text="منصة موحّدة لإدارة العملاء، البرامج، والمدفوعات — بسرعة وأناقة." delay={0.5} />
-            </p>
+             <p className="mx-auto mt-4 max-w-xl text-lg text-slate-300">
+               <WordReveal text="منصة تساعدك تدير عملاءك وبرامجك بسهولة واحترافية." delay={0.5} />
+             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
               <MagneticButton
                 as="a"
@@ -246,9 +308,11 @@ function HeroInspired() {
               >
                 جرّب مجانًا <Download className="h-4 w-4" />
               </MagneticButton>
-              <MagneticButton as="a" href="#pricing" className="rounded-xl border border-white/10 px-5 py-3 text-slate-100 hover:bg-white/5">
-                الخطط والأسعار
-              </MagneticButton>
+              {SHOW_PRICING && (
+                <MagneticButton as="a" href="#pricing" className="rounded-xl border border-white/10 px-5 py-3 text-slate-100 hover:bg-white/5">
+                  الخطط والأسعار
+                </MagneticButton>
+              )}
             </div>
           </motion.div>
 
@@ -261,7 +325,10 @@ function HeroInspired() {
               className="rounded-2xl border border-white/10 bg-white/5 p-5"
             >
               <div className="text-xs text-slate-400">الرصيد</div>
-              <div className="text-2xl font-black">$92,250</div>
+              <div className="text-2xl font-black inline-flex items-center gap-2">
+                <RiyalIcon className="h-6 w-auto" />
+                92,250
+              </div>
               <div className="mt-2 h-2 w-full overflow-hidden rounded-full border border-white/10 bg-slate-800">
                 <motion.div
                   initial={{ width: 0 }}
@@ -372,18 +439,18 @@ function VoiceDemoMockup() {
 
               {/* Transcript typing */}
               <div className="col-span-3">
-                <div className="h-40 overflow-hidden rounded-lg border border-white/10 bg-slate-900/40 p-3 text-sm leading-7 text-slate-200">
-                  <span className="text-cyan-300">You:</span> {typed}
-                  <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-sm bg-cyan-300/80 align-middle" />
-                  <div className="mt-2 text-xs text-slate-400">ASR → فهم سياقي → اقتراحات</div>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  {["تحليل AI", "برنامج أسبوعي", "مشاركة واتساب"].map((t) => (
-                    <span key={t} className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-slate-200">
-                      {t}
-                    </span>
-                  ))}
-                </div>
+            <div className="h-40 overflow-hidden rounded-lg border border-white/10 bg-slate-900/40 p-3 text-sm leading-7 text-slate-200">
+              <span className="text-cyan-300">العميل:</span> {typed}
+              <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-sm bg-cyan-300/80 align-middle" />
+              <div className="mt-2 text-xs text-slate-400">تجربة مبسّطة وواضحة.</div>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              {["سهل الاستخدام", "نتائج ملموسة", "خدمة موثوقة"].map((t) => (
+                <span key={t} className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-slate-200">
+                  {t}
+                </span>
+              ))}
+            </div>
               </div>
             </div>
           </motion.div>
@@ -404,9 +471,11 @@ function VoiceDemoMockup() {
               <MagneticButton as="a" href="#lead" className="rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 px-5 py-3 font-extrabold text-slate-900">
                 انضم للتسجيل المبكر
               </MagneticButton>
-              <MagneticButton as="a" href="#pricing" className="rounded-xl border border-white/10 px-5 py-3 text-slate-100 hover:bg-white/5">
-                شاهد الخطط
-              </MagneticButton>
+              {SHOW_PRICING && (
+                <MagneticButton as="a" href="#pricing" className="rounded-xl border border-white/10 px-5 py-3 text-slate-100 hover:bg-white/5">
+                  شاهد الخطط
+                </MagneticButton>
+              )}
             </div>
           </motion.div>
         </div>
@@ -432,10 +501,10 @@ function SectionHeading({ kicker, title, sub }) {
 
 function HowItWorks() {
   const steps = [
-    { icon: Camera, title: "ارفع البيانات", desc: "سجّل العملاء، القياسات، وصور التقدم بسهولة." },
-    { icon: Sparkles, title: "تحليل ذكي", desc: "Gemini AI يقترح خطط تدريب وغذاء مخصصة." },
-    { icon: MessageCircle, title: "تواصل تلقائي", desc: "تذكيرات وتجديدات عبر WhatsApp دون تعب." },
-    { icon: CreditCard, title: "قبول المدفوعات", desc: "Moyasar لمدى و Apple Pay مع فواتير منظمة." },
+    { icon: Camera, title: "أضف العملاء بسهولة", desc: "بيانات العملاء وصور التقدّم في مكان واحد." },
+    { icon: Sparkles, title: "خطط جاهزة ومرنة", desc: "ابنِ برامج تدريب وغذاء بسرعة." },
+    { icon: MessageCircle, title: "تذكيرات ومتابعة", desc: "ذكّر عملاءك بالمواعيد والتجديدات ببساطة." },
+    { icon: CreditCard, title: "مدفوعات منظمة", desc: "فواتير وسجل مدفوعات بتجربة واضحة." },
   ];
   return (
     <section id="how" className="py-16">
@@ -503,11 +572,11 @@ function SocialProof() {
   return (
     <section className="py-12">
       <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 px-6 md:grid-cols-3">
-        {[
-          { label: "مدرب على قائمة الانتظار", to: 1200 },
-          { label: "صورة تقدّم محلّلة", to: 34000 },
-          { label: "نسبة رضا", to: 96, formatter: (n) => n + "%" },
-        ].map((it) => (
+         {[
+           { label: "مدربين على قائمة الانتظار", to: 1200 },
+           { label: "صور تقدّم", to: 34000 },
+           { label: "نسبة رضا", to: 96, formatter: (n) => n + "%" },
+         ].map((it) => (
           <div key={it.label} className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center">
             <div className="text-3xl font-black text-white"><Counter to={it.to} duration={1.8} formatter={it.formatter || ((n)=>n)} /></div>
             <div className="mt-1 text-sm text-slate-300">{it.label}</div>
@@ -571,7 +640,9 @@ function StickyCTA() {
           <div className="mx-auto flex max-w-4xl flex-col items-center gap-3 md:flex-row md:justify-between">
             <div className="text-sm text-slate-200">جاهز تبدأ؟ سجّل للحصول على خصم المؤسسين.</div>
             <div className="flex gap-2">
-              <MagneticButton as="a" href="#pricing" className="rounded-lg border border-white/10 px-4 py-2">شاهد الأسعار</MagneticButton>
+              {SHOW_PRICING && (
+                <MagneticButton as="a" href="#pricing" className="rounded-lg border border-white/10 px-4 py-2">شاهد الأسعار</MagneticButton>
+              )}
               <MagneticButton as="a" href="#lead" className="rounded-lg bg-gradient-to-r from-cyan-400 to-indigo-500 px-4 py-2 font-extrabold text-slate-900">سجّل الآن</MagneticButton>
             </div>
           </div>
@@ -584,9 +655,8 @@ function StickyCTA() {
 /* ---------------------------- Platform Badges row ------------------------- */
 function PlatformBadges() {
   const items = [
-    { icon: Globe, label: "ويب (PWA)" },
-    { icon: MonitorSmartphone, label: "لوحة المدرب" },
-    { icon: Apple, label: "iOS قريبًا" },
+    { icon: Globe, label: "يدعم المتصفح" },
+    { icon: MonitorSmartphone, label: "تجربة سهلة" },
   ];
   return (
     <div className="border-y border-white/10 bg-white/5">
@@ -604,9 +674,9 @@ function PlatformBadges() {
 /* ------------------------------ Use-cases rail ---------------------------- */
 function UseCasesRail() {
   const cases = [
-    { icon: Camera, title: "صور تقدّم + AI", desc: "قارن قبل/بعد واقتراحات تلقائية." },
-    { icon: MessageCircle, title: "تذكيرات واتساب", desc: "مواعيد، تجديدات، رسائل تحفيز." },
-    { icon: CreditCard, title: "فوترة Moyasar", desc: "مدى + Apple Pay بفواتير إلكترونية." },
+    { icon: Camera, title: "صور التقدّم", desc: "قارن قبل/بعد واعرض الإنجاز للعميل." },
+    { icon: MessageCircle, title: "تذكيرات سهلة", desc: "ذكّر بالمواعيد والتجديدات بدون تعقيد." },
+    { icon: CreditCard, title: "فوترة مبسّطة", desc: "إدارة مدفوعات واضحة ومنظمة." },
   ];
   return (
     <section className="py-16">
@@ -723,7 +793,7 @@ function PricingInspired() {
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-3">
           <PriceCard
             title="Basic"
-            price={yearly ? "999 ر.س/سنة" : "99 ر.س/شهر"}
+            price={yearly ? <SAR amount={999} period="سنة" /> : <SAR amount={99} period="شهر" />}
             list={["حتى 25 عميل", "لوحة أساسية", "فوترة", "دعم بريد"]}
             subtle
           />
@@ -745,7 +815,7 @@ function PricingInspired() {
                   exit={{ y: -12, opacity: 0 }}
                   transition={{ duration: 0.35 }}
                 >
-                  {yearly ? "1999 ر.س/سنة" : "199 ر.س/شهر"}
+                  <SAR amount={yearly ? 1999 : 199} period={yearly ? "سنة" : "شهر"} />
                 </motion.span>
               </AnimatePresence>
             </div>
@@ -765,7 +835,7 @@ function PricingInspired() {
             </MagneticButton>
           </motion.div>
 
-          <PriceCard title="Pro" price={yearly ? "3999 ر.س/سنة" : "399 ر.س/شهر"} list={["غير محدود", "تحليلات AI متقدمة", "تطبيق مخصص", "دعم 24/7"]} />
+          <PriceCard title="Pro" price={yearly ? <SAR amount={3999} period="سنة" /> : <SAR amount={399} period="شهر" />} list={["غير محدود", "تحليلات AI متقدمة", "تطبيق مخصص", "دعم 24/7"]} />
         </div>
         <div className="mt-2 text-center text-xs text-slate-400">
           * الأسعار تمهيدية وقد تتغيّر عند الإطلاق الرسمي.
