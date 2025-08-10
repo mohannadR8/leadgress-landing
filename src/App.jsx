@@ -110,7 +110,7 @@ function SAR({ amount, period }) {
 export default function FitnessTrainerFramerLanding() {
   return (
     <MotionConfig transition={{ type: "spring", stiffness: 170, damping: 22, mass: 0.9 }}>
-      <div dir="rtl" className="min-h-screen bg-[#0a0f16] text-slate-100 selection:bg-cyan-300/30 scroll-smooth">
+      <div dir="rtl" className="min-h-screen bg-[#0a0f16] text-slate-100 selection:bg-cyan-300/30 scroll-smooth rtl-ws">
         <ScrollProgress />
         <NeonBackdrop />
         <CursorGlow />
@@ -270,9 +270,9 @@ function WordReveal({ text, delay = 0 }) {
           whileInView={{ y: 0, opacity: 1 }}
           viewport={{ once: true, margin: "-10% 0% -10% 0%" }}
           transition={{ delay: delay + i * 0.03, duration: 0.5 }}
-          className="inline-block"
+          className="inline-block me-[0.2em]"
         >
-          {w}{" "}
+          {w}
         </motion.span>
       ))}
     </span>
